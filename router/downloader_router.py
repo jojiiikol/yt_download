@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query
 from fastapi.params import Depends
 from pydantic import BaseModel
 
-from dependences import get_download_service, get_download_ytdlp_service
+from dependences import get_download_service, get_download_ytdlp_service, get_service
 from filter.video_filter import FilterParams, BaseFilter, ResolutionFilter
 from service.download_abstract_service import DownloadAbstractService
 
@@ -15,21 +15,16 @@ router = APIRouter(
 
 
 @router.get("/all")
-async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams), download_service: DownloadAbstractService = Depends(get_download_service)):
+async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams), download_service: DownloadAbstractService = Depends(get_service)):
     result = await download_service.get_video_info(video_url, filter_query)
     return result
 
 @router.get("/fastest")
-async def get_fastest_stream(video_url: str, download_service: DownloadAbstractService = Depends(get_download_service)):
+async def get_fastest_stream(video_url: str, download_service: DownloadAbstractService = Depends(get_service)):
     result = await download_service.get_fastest_video(video_url=video_url)
     return result
 
 @router.get("/video")
-async def get_video(video_url: str, filter_query: BaseFilter = Depends(ResolutionFilter), download_service: DownloadAbstractService = Depends(get_download_service)):
+async def get_video(video_url: str, filter_query: BaseFilter = Depends(ResolutionFilter), download_service: DownloadAbstractService = Depends(get_service)):
     result = await download_service.download_video(video_url=video_url, filter_query=filter_query)
-    return result
-
-@router.get("/dlp")
-async def get_dlp_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams), download_service: DownloadAbstractService = Depends(get_download_ytdlp_service)):
-    result = await download_service.get_video_info(video_url, filter_query=filter_query)
     return result

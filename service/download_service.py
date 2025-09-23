@@ -1,7 +1,7 @@
 import urllib.error
 
 from fastapi import HTTPException
-from yt_dlp import YoutubeDL
+from yt_dlp import YoutubeDL, DownloadError
 
 from exceptions.connect_exeption import connect_exception
 from exceptions.streams_exception import is_empty_streams
@@ -15,6 +15,7 @@ from pytubefix import exceptions as ptf_yt_exceptions
 
 from utils.stream_mapper import stream_pytubefix_to_schema, dlp_parser, stream_dlp_to_schema, dlp_filter
 import json
+
 
 
 class DownloadPytubefixService(DownloadAbstractService):
@@ -48,7 +49,10 @@ class DownloadYtDlpService(DownloadAbstractService):
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
         def extract_info():
             with YoutubeDL() as ydl:
-                info = ydl.extract_info(video_url, download=False)
+                try:
+                    info = ydl.extract_info(video_url, download=False)
+                except DownloadError as e:
+                    raise HTTPException(status_code=500, detail="Unknown error from yt-dlp. Please try use pytubefix library")
                 info = dlp_parser(info)
                 info_schema = [stream_dlp_to_schema(stream) for stream in info]
                 info_schema = dlp_filter(info_schema, filter_query)
@@ -59,5 +63,13 @@ class DownloadYtDlpService(DownloadAbstractService):
     async def download_video(self, stream_id: int):
         pass
 
-    async def get_fastest_video(self, stream_id: int):
-        pass
+    async def get_fastest_video(self, video_url: str):
+        def extract_info():
+            with YoutubeDL() as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                info = dlp_parser(info)
+                info_schema = [stream_dlp_to_schema(stream) for stream in info]
+                info_schema = dlp_filter(info_schema, FilterParams(progressive=True))
+                return info_schema
+        info = await asyncio.to_thread(extract_info)
+        return info

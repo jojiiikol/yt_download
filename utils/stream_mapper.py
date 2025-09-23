@@ -61,6 +61,11 @@ def dlp_parser(video_info: Dict) -> List[Dict]:
 def dlp_filter(dlp_data: List[StreamDlpSchema], filters: FilterParams) -> List[StreamDlpSchema]:
     result = []
     for item in dlp_data:
+
+        if filters.progressive:
+            if item.video_codec and item.audio_codec:
+                return [item]
+
         if filters.resolution and item.resolution != filters.resolution:
             continue
 
@@ -71,5 +76,6 @@ def dlp_filter(dlp_data: List[StreamDlpSchema], filters: FilterParams) -> List[S
         if filters.only_video:
             if not item.video_codec or item.audio_codec:
                 continue
+
         result.append(item)
     return result
