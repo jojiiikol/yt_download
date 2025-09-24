@@ -1,6 +1,9 @@
 import urllib.error
+from datetime import datetime
+from typing import List, Dict
 
 from fastapi import HTTPException
+import os
 from yt_dlp import YoutubeDL, DownloadError
 
 from exceptions.connect_exeption import connect_exception
@@ -9,10 +12,12 @@ from filter.video_filter import BaseFilter, FilterParams, ResolutionFilter
 import asyncio
 
 from schema.stream_schema import StreamPytubefixSchema
+from service.combine_service import CombineFfmpegService
 from service.download_abstract_service import DownloadAbstractService
-from pytubefix import YouTube as ptf_yt
+from pytubefix import YouTube as ptf_yt, Stream
 from pytubefix import exceptions as ptf_yt_exceptions
 
+from utils.filename_maker import get_filename
 from utils.stream_mapper import stream_pytubefix_to_schema, dlp_parser, stream_dlp_to_schema, dlp_filter
 import json
 
@@ -31,9 +36,29 @@ class DownloadPytubefixService(DownloadAbstractService):
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
         video = ptf_yt(video_url)
-        streams = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
-        is_empty_streams(streams)
-        return stream_pytubefix_to_schema(streams)
+        audio = None
+        stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
+        is_empty_streams(stream)
+        if not stream.audio_codec:
+            audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
+        # filespath = await self.download_streams(stream, audio)
+        cfs = CombineFfmpegService()
+        await cfs.combine(**{
+            "video_path": os.path.abspath("20250924-151725.webm"),
+            "audio_path": os.path.abspath("20250924-151807.m4a")
+        })
+        return stream_pytubefix_to_schema(stream)
+
+    async def download_streams(self, video_stream: Stream, audio_stream: Stream | None = None) -> Dict[str: str, str: str | None]:
+        video = video_stream.download(filename=get_filename(video_stream.default_filename), skip_existing=False)
+        audio = None
+        if audio_stream is not None:
+            audio = audio_stream.download(filename=get_filename(audio_stream.default_filename), skip_existing=False)
+        return {
+            "video_path": video,
+            "audio_path": audio,
+        }
+
 
     async def get_fastest_video(self, video_url: str):
         video = ptf_yt(video_url)

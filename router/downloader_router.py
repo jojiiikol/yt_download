@@ -24,7 +24,7 @@ async def get_fastest_stream(video_url: str, download_service: DownloadAbstractS
     result = await download_service.get_fastest_video(video_url=video_url)
     return result
 
-@router.get("/video")
-async def get_video(video_url: str, filter_query: BaseFilter = Depends(ResolutionFilter), download_service: DownloadAbstractService = Depends(get_service)):
+@router.get("/download")
+async def download_video(video_url: str, filter_query: BaseFilter = Depends(ResolutionFilter), download_service: DownloadAbstractService = Depends(get_service)):
     result = await download_service.download_video(video_url=video_url, filter_query=filter_query)
     return result
