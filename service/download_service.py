@@ -4,6 +4,8 @@ from typing import List, Dict
 
 from fastapi import HTTPException
 import os
+
+from starlette.responses import FileResponse
 from yt_dlp import YoutubeDL, DownloadError
 
 from exceptions.connect_exeption import connect_exception
@@ -17,7 +19,8 @@ from service.download_abstract_service import DownloadAbstractService
 from pytubefix import YouTube as ptf_yt, Stream
 from pytubefix import exceptions as ptf_yt_exceptions
 
-from utils.filename_maker import get_filename
+from settings import POSIX_MEDIA_DIR
+from utils.filename_maker import get_filename, get_posix_path
 from utils.stream_mapper import stream_pytubefix_to_schema, dlp_parser, stream_dlp_to_schema, dlp_filter
 import json
 
@@ -35,28 +38,27 @@ class DownloadPytubefixService(DownloadAbstractService):
             raise HTTPException(status_code=500, detail=str(e))
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
-        video = ptf_yt(video_url)
-        audio = None
-        stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
-        is_empty_streams(stream)
-        if not stream.audio_codec:
-            audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
-        # filespath = await self.download_streams(stream, audio)
-        cfs = CombineFfmpegService()
-        await cfs.combine(**{
-            "video_path": os.path.abspath("20250924-151725.webm"),
-            "audio_path": os.path.abspath("20250924-151807.m4a")
-        })
-        return stream_pytubefix_to_schema(stream)
+        # video = ptf_yt(video_url)
+        # audio = None
+        # stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
+        # is_empty_streams(stream)
+        # if not stream.audio_codec:
+        #     audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
+        # files_path = await self.download_streams(stream, audio)
+        # print(files_path)
+        # cfs = CombineFfmpegService()
+        # result = await cfs.combine(**files_path)
+        print(get_posix_path("D:\\PythonProjects\\Pancake\\yt_download\\media\\20250924-225901.mp4"))
+        return FileResponse(path=get_posix_path("D:\\PythonProjects\\Pancake\\yt_download\\media\\20250924-225901.mp4"), media_type="video/mp4")
 
     async def download_streams(self, video_stream: Stream, audio_stream: Stream | None = None) -> Dict[str: str, str: str | None]:
-        video = video_stream.download(filename=get_filename(video_stream.default_filename), skip_existing=False)
+        video = video_stream.download(filename=get_filename(video_stream.default_filename), output_path=POSIX_MEDIA_DIR, skip_existing=False)
         audio = None
         if audio_stream is not None:
-            audio = audio_stream.download(filename=get_filename(audio_stream.default_filename), skip_existing=False)
+            audio = audio_stream.download(filename=get_filename(audio_stream.default_filename), output_path=POSIX_MEDIA_DIR, skip_existing=False)
         return {
-            "video_path": video,
-            "audio_path": audio,
+            "video_path": get_posix_path(video),
+            "audio_path": get_posix_path(audio),
         }
 
 
