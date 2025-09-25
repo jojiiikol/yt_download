@@ -3,7 +3,7 @@ from typing import List, Dict
 from pytubefix import Stream
 
 from filter.video_filter import FilterParams
-from schema.stream_schema import StreamSchema, StreamDlpSchema
+from schema.stream_schema import StreamSchema
 
 
 def stream_pytubefix_to_schema(stream: Stream) -> StreamSchema:

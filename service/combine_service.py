@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from service.combine_abstract_service import CombineAbstractService
 from ffmpeg import FFmpeg
 import os

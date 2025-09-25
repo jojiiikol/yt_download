@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from service.download_abstract_service import DownloadAbstractService
-
 
 class CombineAbstractService(ABC):
     @abstractmethod

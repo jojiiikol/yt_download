@@ -1,8 +1,8 @@
-from typing import Annotated, Literal, List
+from typing import List
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from fastapi.params import Depends
-from pydantic import BaseModel
+
 from starlette.responses import FileResponse
 
 from dependences import get_service

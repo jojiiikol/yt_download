@@ -1,6 +1,5 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
-from pytubefix.exceptions import AgeRestrictedError, VideoUnavailable
+from fastapi import FastAPI, Request
+from pytubefix.exceptions import VideoUnavailable
 from starlette.responses import JSONResponse
 from yt_dlp import DownloadError
 

@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from pytubefix import StreamQuery, Stream
+from pytubefix import Stream
 
 
 def is_empty_streams(stream: Stream):
