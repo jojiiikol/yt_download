@@ -1,11 +1,9 @@
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import List, Dict
+from typing import Dict
 
-from fastapi import HTTPException
 
 from starlette.responses import FileResponse
-from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL
 
 from exceptions.streams_exception import is_empty_streams
 from filter.video_filter import FilterParams, ResolutionFilter
@@ -20,19 +18,18 @@ from utils.filename_maker import get_filename, get_posix_path
 from utils.stream_mapper import stream_pytubefix_to_schema, dlp_parser, stream_dlp_to_schema, dlp_filter
 
 class DownloadPytubefixService(DownloadAbstractService):
-    def __init__(self, combine_service: CombineAbstractService, executor: ThreadPoolExecutor):
+    def __init__(self, combine_service: CombineAbstractService):
         self.combine_service = combine_service
-        self.executor = executor
 
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
-        video = ptf_yt(video_url)
+        video = await asyncio.to_thread(ptf_yt, video_url)
         video.check_availability()
         streams = video.streams.filter(**filter_query.model_dump())
         streams = [stream_pytubefix_to_schema(stream) for stream in streams]
         return streams
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
-        video = ptf_yt(video_url)
+        video = await asyncio.to_thread(ptf_yt, video_url)
         audio = None
 
         stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
@@ -40,8 +37,8 @@ class DownloadPytubefixService(DownloadAbstractService):
         if not stream.audio_codec:
             audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
 
-        files_path = await asyncio.get_running_loop().run_in_executor(self.executor, self.download_streams, stream, audio)
-        result_path = await asyncio.get_running_loop().run_in_executor(self.executor, self.combine_service.combine, files_path.get("video_path"), files_path.get("audio_path"))
+        files_path = await asyncio.to_thread(self.download_streams, stream, audio)
+        result_path = await asyncio.to_thread(self.combine_service.combine, files_path.get("video_path"), files_path.get("audio_path"))
 
         return FileResponse(path=result_path, filename="video.mp4", media_type="application/octet-stream")
 
@@ -59,18 +56,14 @@ class DownloadPytubefixService(DownloadAbstractService):
 
     async def get_fastest_video(self, video_url: str):
         video = ptf_yt(video_url)
-        try:
-            video.check_availability()
-            stream = video.streams.get_highest_resolution()
-            stream = stream_pytubefix_to_schema(stream)
-            return stream
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        video.check_availability()
+        stream = video.streams.get_highest_resolution()
+        stream = stream_pytubefix_to_schema(stream)
+        return stream
 
 class DownloadYtDlpService(DownloadAbstractService):
-    def __init__(self, combine_service: CombineAbstractService, executor: ThreadPoolExecutor):
+    def __init__(self, combine_service: CombineAbstractService):
         self.combine_service = combine_service
-        self.executor = executor
 
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
         def extract_info():
@@ -84,7 +77,7 @@ class DownloadYtDlpService(DownloadAbstractService):
         return info
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
-        file_path = await asyncio.get_running_loop().run_in_executor(self.executor, self.download_video_sync, video_url, filter_query)
+        file_path = await asyncio.to_thread(self.download_video_sync, video_url, filter_query)
         return FileResponse(path=file_path, filename="video.mp4", media_type="application/octet-stream")
 
     def download_video_sync(self, video_url: str, filter_query: ResolutionFilter):
@@ -99,10 +92,8 @@ class DownloadYtDlpService(DownloadAbstractService):
             }],
         }
         filename_path += ".mp4"
-
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
-
 
         return filename_path
 
@@ -116,6 +107,3 @@ class DownloadYtDlpService(DownloadAbstractService):
                 return info_schema
         info = await asyncio.to_thread(extract_info)
         return info
-
-    async def download_streams(self, video_stream, audio_stream) -> List[str]:
-        pass
