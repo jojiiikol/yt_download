@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
 
-class StreamPytubefixSchema(BaseModel):
-    itag: int
+class StreamSchema(BaseModel):
+    itag: str
     title: str | None = None
     size: float | None = None
     download_url: str | None = None

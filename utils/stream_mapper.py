@@ -3,12 +3,12 @@ from typing import List, Dict
 from pytubefix import Stream
 
 from filter.video_filter import FilterParams
-from schema.stream_schema import StreamPytubefixSchema, StreamDlpSchema
+from schema.stream_schema import StreamSchema, StreamDlpSchema
 
 
-def stream_pytubefix_to_schema(stream: Stream) -> StreamPytubefixSchema:
-    stream_schema = StreamPytubefixSchema(
-        itag=stream.itag,
+def stream_pytubefix_to_schema(stream: Stream) -> StreamSchema:
+    stream_schema = StreamSchema(
+        itag=str(stream.itag),
         title=stream.title,
         size=stream.filesize_mb,
         download_url=stream.url,
@@ -18,8 +18,8 @@ def stream_pytubefix_to_schema(stream: Stream) -> StreamPytubefixSchema:
     )
     return stream_schema
 
-def stream_dlp_to_schema(video_info: Dict) -> StreamDlpSchema:
-    stream_schema = StreamDlpSchema(
+def stream_dlp_to_schema(video_info: Dict) -> StreamSchema:
+    stream_schema = StreamSchema(
         itag=video_info["itag"],
         title=video_info["title"],
         size=video_info["size"],
@@ -58,7 +58,7 @@ def dlp_parser(video_info: Dict) -> List[Dict]:
         result.append(video_info)
     return result
 
-def dlp_filter(dlp_data: List[StreamDlpSchema], filters: FilterParams) -> List[StreamDlpSchema]:
+def dlp_filter(dlp_data: List[StreamSchema], filters: FilterParams) -> List[StreamSchema]:
     result = []
     for item in dlp_data:
 
