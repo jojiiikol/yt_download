@@ -1,11 +1,12 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, List
 
 from fastapi import APIRouter, Query
 from fastapi.params import Depends
 from pydantic import BaseModel
 
-from dependences import get_download_service, get_download_ytdlp_service, get_service
+from dependences import get_service
 from filter.video_filter import FilterParams, BaseFilter, ResolutionFilter
+from schema.stream_schema import StreamPytubefixSchema
 from service.download_abstract_service import DownloadAbstractService
 
 router = APIRouter(
@@ -15,7 +16,7 @@ router = APIRouter(
 
 
 @router.get("/all")
-async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams), download_service: DownloadAbstractService = Depends(get_service)):
+async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams), download_service: DownloadAbstractService = Depends(get_service)) -> List[StreamPytubefixSchema]:
     result = await download_service.get_video_info(video_url, filter_query)
     return result
 
