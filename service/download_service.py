@@ -26,30 +26,32 @@ class DownloadPytubefixService(DownloadAbstractService):
 
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
         video = ptf_yt(video_url)
-        try:
-            video.check_availability()
-            streams = video.streams.filter(**filter_query.model_dump())
-            streams = [stream_pytubefix_to_schema(stream) for stream in streams]
-            return streams
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        video.check_availability()
+        streams = video.streams.filter(**filter_query.model_dump())
+        streams = [stream_pytubefix_to_schema(stream) for stream in streams]
+        return streams
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
         video = ptf_yt(video_url)
         audio = None
+
         stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
         is_empty_streams(stream)
         if not stream.audio_codec:
             audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
+
         files_path = await asyncio.get_running_loop().run_in_executor(self.executor, self.download_streams, stream, audio)
         result_path = await asyncio.get_running_loop().run_in_executor(self.executor, self.combine_service.combine, files_path.get("video_path"), files_path.get("audio_path"))
+
         return FileResponse(path=result_path, filename="video.mp4", media_type="application/octet-stream")
 
     def download_streams(self, video_stream: Stream, audio_stream: Stream | None = None) -> Dict[str: str, str: str | None]:
         video = video_stream.download(filename=get_filename(video_stream.default_filename), output_path=POSIX_MEDIA_DIR, skip_existing=False)
         audio = None
+
         if audio_stream is not None:
             audio = audio_stream.download(filename=get_filename(audio_stream.default_filename), output_path=POSIX_MEDIA_DIR, skip_existing=False)
+
         return {
             "video_path": get_posix_path(video),
             "audio_path": get_posix_path(audio),
@@ -73,10 +75,7 @@ class DownloadYtDlpService(DownloadAbstractService):
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
         def extract_info():
             with YoutubeDL() as ydl:
-                try:
-                    info = ydl.extract_info(video_url, download=False)
-                except DownloadError as e:
-                    raise HTTPException(status_code=500, detail="Unknown error from yt-dlp. Please try use another service")
+                info = ydl.extract_info(video_url, download=False)
                 info = dlp_parser(info)
                 info_schema = [stream_dlp_to_schema(stream) for stream in info]
                 info_schema = dlp_filter(info_schema, filter_query)
@@ -103,6 +102,7 @@ class DownloadYtDlpService(DownloadAbstractService):
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
+
 
         return filename_path
 
