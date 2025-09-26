@@ -18,6 +18,7 @@ def stream_pytubefix_to_schema(stream: Stream) -> StreamSchema:
     )
     return stream_schema
 
+
 def stream_dlp_to_schema(video_info: Dict) -> StreamSchema:
     stream_schema = StreamSchema(
         itag=video_info["itag"],
@@ -29,6 +30,7 @@ def stream_dlp_to_schema(video_info: Dict) -> StreamSchema:
         resolution=video_info["resolution"],
     )
     return stream_schema
+
 
 def dlp_parser(video_info: Dict) -> List[Dict]:
     title = video_info.get('title')
@@ -58,6 +60,7 @@ def dlp_parser(video_info: Dict) -> List[Dict]:
 
         result.append(video_info)
     return result
+
 
 def dlp_filter(dlp_data: List[StreamSchema], filters: FilterParams) -> List[StreamSchema]:
     result = []

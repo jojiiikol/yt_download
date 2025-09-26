@@ -30,8 +30,8 @@ def cleanup_task() -> None:
     files = os.listdir(dir_path)
     for file in files:
         file_datetime_created = datetime.strptime(file.split(".")[0], "%Y%m%d-%H%M%S")
-        if datetime.now() - file_datetime_created > timedelta(days=1):
+        if datetime.now() - file_datetime_created > timedelta(hours=1):
             print(f"Deleting {file}")
             os.remove(os.path.join(dir_path, file))
 
-scheduler.add_job(cleanup_task, "interval", minutes=24*60)
+scheduler.add_job(cleanup_task, "interval", minutes=60)

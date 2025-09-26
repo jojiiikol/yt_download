@@ -23,13 +23,14 @@ class DownloadPytubefixService(DownloadAbstractService):
 
     async def get_video_info(self, video_url: str, filter_query: FilterParams):
         video = await asyncio.to_thread(ptf_yt, video_url)
-        video.check_availability()
+        await asyncio.to_thread(video.check_availability)
         streams = video.streams.filter(**filter_query.model_dump())
         streams = [stream_pytubefix_to_schema(stream) for stream in streams]
         return streams
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter):
         video = await asyncio.to_thread(ptf_yt, video_url)
+        await asyncio.to_thread(video.check_availability)
         audio = None
 
         stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
@@ -43,6 +44,7 @@ class DownloadPytubefixService(DownloadAbstractService):
         return FileResponse(path=result_path, filename="video.mp4", media_type="application/octet-stream")
 
     def download_streams(self, video_stream: Stream, audio_stream: Stream | None = None) -> Dict[str: str, str: str | None]:
+
         video = video_stream.download(filename=get_filename(video_stream.default_filename), output_path=POSIX_MEDIA_DIR, skip_existing=False)
         audio = None
 
@@ -55,8 +57,8 @@ class DownloadPytubefixService(DownloadAbstractService):
         }
 
     async def get_fastest_video(self, video_url: str):
-        video = ptf_yt(video_url)
-        video.check_availability()
+        video = await asyncio.to_thread(ptf_yt, video_url)
+        await asyncio.to_thread(video.check_availability)
         stream = video.streams.get_highest_resolution()
         stream = stream_pytubefix_to_schema(stream)
         return stream

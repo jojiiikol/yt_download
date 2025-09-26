@@ -22,7 +22,7 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
     return result
 
 @router.get("/fastest")
-async def get_fastest_stream(video_url: str, download_service: DownloadAbstractService = Depends(get_service)) -> List[StreamSchema]:
+async def get_fastest_stream(video_url: str, download_service: DownloadAbstractService = Depends(get_service)) -> StreamSchema:
     result = await download_service.get_fastest_video(video_url=video_url)
     return result
 

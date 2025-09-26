@@ -1,0 +1,12 @@
+services:
+  api:
+    build:
+      context:
+        ../yt_download
+    container_name: api
+    command: bash -c "python main.py"
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    restart: always

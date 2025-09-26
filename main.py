@@ -25,4 +25,4 @@ app.include_router(downloader_router)
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=os.getenv("APP_HOST"), port=int(os.getenv("APP_PORT")))
+    uvicorn.run(app, host="0.0.0.0", port=8000)
