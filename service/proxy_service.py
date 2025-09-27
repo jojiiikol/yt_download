@@ -7,7 +7,14 @@ from service.proxy_abstract_service import ProxyAbstractService
 
 
 class ProxyService(ProxyAbstractService):
-    proxy_list = [ProxySchema(url="127.0.0.1:8000")]
+    proxy_list: List[ProxySchema] = [
+        ProxySchema(url="http://5.10.245.118:80"),
+        ProxySchema(url="http://194.152.44.40:80"),
+        ProxySchema(url="http://194.36.55.217:80"),
+        ProxySchema(url="socks5://185.93.89.147:4002"),
+        ProxySchema(url="socks5://141.11.21.206:1080"),
+        ProxySchema(url="socks5://51.210.156.30:51771"),
+    ]
 
     async def get_all(self) -> List[ProxySchema]:
         return self.proxy_list

@@ -11,6 +11,10 @@ from service.download_service import DownloadPytubefixService, DownloadYtDlpServ
 from service.proxy_abstract_service import ProxyAbstractService
 from service.proxy_service import ProxyService
 
+proxy_service = ProxyService()
+
+def get_proxy_service() -> ProxyAbstractService:
+    return proxy_service
 
 def get_combine_service() -> CombineAbstractService:
     return CombineFfmpegService()
@@ -19,13 +23,12 @@ def get_download_pytubefix_service() -> DownloadPytubefixService:
     return DownloadPytubefixService(get_combine_service())
 
 def get_download_ytdlp_service() -> DownloadYtDlpService:
-    return DownloadYtDlpService(get_combine_service())
+    return DownloadYtDlpService(get_combine_service(), get_proxy_service())
 
 def get_cookie_service() -> CookieAbstractService:
     return CookieService()
 
-def get_proxy_service() -> ProxyAbstractService:
-    return ProxyService()
+
 
 
 def get_service(service_name: Literal["pytubefix", "yt-dlp"]) -> DownloadAbstractService:

@@ -8,12 +8,7 @@ from yt_dlp import DownloadError
 
 
 def register_exception_handler(app: FastAPI):
-    @app.exception_handler(DownloadError)
-    async def download_ytdlp_exception_handler(request: Request, exc: DownloadError):
-        return JSONResponse(
-            status_code=402,
-            content={"detail": exc.msg},
-        )
+
 
     @app.exception_handler(VideoUnavailable)
     async def age_exception_handler(request: Request, exc: VideoUnavailable):
@@ -22,10 +17,10 @@ def register_exception_handler(app: FastAPI):
             content={"detail": exc.error_string},
         )
 
-    # @app.exception_handler(URLError)
-    # async def url_exception_handler(request: Request, exc: URLError):
-    #     return JSONResponse(
-    #         status_code=500,
-    #         content={"detail": "Host dont respond"},
-    #     )
+    @app.exception_handler(URLError)
+    async def url_exception_handler(request: Request, exc: URLError):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Host dont respond"},
+        )
 
