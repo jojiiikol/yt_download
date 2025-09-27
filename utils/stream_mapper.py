@@ -44,21 +44,25 @@ def dlp_parser(video_info: Dict) -> List[Dict]:
 
         itag = format.get('format_id')
         resolution = format.get('resolution').split("x")[1] + "p" if format.get('resolution') != "audio only" else None
-        size = format.get('filesize') if format.get('filesize') else format.get('filesize_approx')
+        size = format.get('filesize') if format.get('filesize') else format.get('filesize_approx') if format.get(
+            'filesize_approx') else format.get('available_at') if format.get('available_at') else None
         vcodec = None if format.get('vcodec') == "none" else format.get('vcodec')
         acodec = None if format.get('acodec') == "none" else format.get('acodec')
 
         if vcodec is None and acodec is None:
             continue
+
         video_info["itag"] = itag
         video_info["title"] = title
-        video_info["size"] = round(size / 1024 / 1024, 3)
+        video_info["size"] = round(size / 1024 / 1024, 3) if size else None
         video_info["resolution"] = resolution
         video_info["vcodec"] = vcodec
         video_info["acodec"] = acodec
         video_info["url"] = url
 
         result.append(video_info)
+
+
     return result
 
 

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict
 
-
+from fastapi.params import Form
 from starlette.responses import FileResponse
 from yt_dlp import YoutubeDL
 
@@ -13,9 +13,11 @@ from service.combine_abstract_service import CombineAbstractService
 from service.download_abstract_service import DownloadAbstractService
 from pytubefix import YouTube as ptf_yt, Stream
 
-from settings import POSIX_MEDIA_DIR
+from settings import POSIX_MEDIA_DIR, COOKIES_DIR
 from utils.filename_maker import get_filename, get_posix_path
 from utils.stream_mapper import stream_pytubefix_to_schema, dlp_parser, stream_dlp_to_schema, dlp_filter
+import os
+
 
 class DownloadPytubefixService(DownloadAbstractService):
     def __init__(self, combine_service: CombineAbstractService):
@@ -67,9 +69,14 @@ class DownloadYtDlpService(DownloadAbstractService):
     def __init__(self, combine_service: CombineAbstractService):
         self.combine_service = combine_service
 
-    async def get_video_info(self, video_url: str, filter_query: FilterParams):
+    async def get_video_info(self, video_url: str, filter_query: FilterParams, cookie_file: str | None = None):
         def extract_info():
-            with YoutubeDL() as ydl:
+            ydl_opts = {
+                "noplaylist": True,
+            }
+            if cookie_file is not None:
+                ydl_opts['cookiefile'] = cookie_file
+            with YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=False)
                 info = dlp_parser(info)
                 info_schema = [stream_dlp_to_schema(stream) for stream in info]
@@ -78,14 +85,16 @@ class DownloadYtDlpService(DownloadAbstractService):
         info = await asyncio.to_thread(extract_info)
         return info
 
-    async def download_video(self, video_url: str, filter_query: ResolutionFilter):
-        file_path = await asyncio.to_thread(self.download_video_sync, video_url, filter_query)
+    async def download_video(self, video_url: str, filter_query: ResolutionFilter, cookie_file: str | None = None):
+        file_path = await asyncio.to_thread(self.download_video_sync, video_url, filter_query, cookie_file)
         return FileResponse(path=file_path, filename="video.mp4", media_type="application/octet-stream")
 
-    def download_video_sync(self, video_url: str, filter_query: ResolutionFilter):
+    def download_video_sync(self, video_url: str, filter_query: ResolutionFilter, cookie_file: str | None = None):
         filename_path = POSIX_MEDIA_DIR + "/" + datetime.now().strftime("%Y%m%d-%H%M%S%f")
+
         ydl_opts = {
             "format": f"bestvideo[height={filter_query.resolution[:len(str(filter_query.resolution)) - 1]}]+bestaudio",
+            "noplaylist": True,
             'merge_output_format': None,
             "outtmpl": filename_path,
             "postprocessors": [{
@@ -93,19 +102,27 @@ class DownloadYtDlpService(DownloadAbstractService):
                 "preferedformat": "mp4"
             }],
         }
+        if cookie_file is not None:
+            ydl_opts['cookiefile'] = cookie_file
+
         filename_path += ".mp4"
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([video_url])
 
         return filename_path
 
-    async def get_fastest_video(self, video_url: str):
+    async def get_fastest_video(self, video_url: str, cookie_file: str | None = None):
+        ydl_opts = {
+            "noplaylist": True,
+        }
+        if cookie_file is not None:
+            ydl_opts['cookiefile'] = cookie_file
         def extract_info():
-            with YoutubeDL() as ydl:
+            with YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(video_url, download=False)
                 info = dlp_parser(info)
                 info_schema = [stream_dlp_to_schema(stream) for stream in info]
                 info_schema = dlp_filter(info_schema, FilterParams(progressive=True))
                 return info_schema
         info = await asyncio.to_thread(extract_info)
-        return info
+        return info[0]

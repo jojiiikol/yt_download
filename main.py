@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from exceptions.exception_handler import register_exception_handler
 from router.downloader_router import router as downloader_router
+from router.proxy_router import router as proxy_router
 from utils.scheduler import scheduler
 
 load_dotenv()
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="yt-download_client", lifespan=lifespan)
 register_exception_handler(app)
 app.include_router(downloader_router)
+app.include_router(proxy_router)
 
 
 
