@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Downloader</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Downloader</h1>
+
+    <label for="url">URL видео:</label>
+    <input type="text" id="url" placeholder="https://youtube.com/...">
+
+    <label for="filter">Фильтр:</label>
+    <select id="filter">
+      <option value="all">Все потоки</option>
+      <option value="progressive">Прогрессивное видео</option>
+      <option value="only_audio">Только аудио</option>
+      <option value="only_video">Только видео</option>
+    </select>
+
+    <label for="resolution">Разрешение:</label>
+    <select id="resolution">
+        <option value="">Не выбрано</option>
+      <option value="144p">144p</option>
+      <option value="240p">240p</option>
+      <option value="360p">360p</option>
+      <option value="480p">480p</option>
+      <option value="720p">720p</option>
+      <option value="1080p">1080p</option>
+      <option value="1440p">1440p</option>
+      <option value="2160p">2160p</option>
+    </select>
+
+    <label for="cookie">Cookies:</label>
+    <textarea id="cookie" placeholder="Вставьте cookie..."></textarea>
+
+    <label for="proxy">URL прокси:</label>
+    <input type="text" id="proxy" placeholder="http://127.0.0.1:8080">
+
+    <label for="service">Движок:</label>
+    <select id="service">
+      <option value="pytubefix">pytubefix</option>
+      <option value="yt-dlp">yt-dlp</option>
+    </select>
+
+    <div class="buttons">
+      <button onclick="getInfo()">Найти информацию</button>
+      <button onclick="getDirect()">Прямая ссылка</button>
+      <button onclick="downloadFile()">Скачать</button>
+    </div>
+
+      <div id="loader" class="loader" style="display:none;"></div>
+
+  <div id="error" class="error"></div>
+
+      <div id="info-list" class="info-list"></div>
+  </div>
+
+
+
+  <script src="script.js"></script>
+</body>
+</html>
