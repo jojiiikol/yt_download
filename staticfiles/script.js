@@ -81,7 +81,7 @@ async function getInfo() {
     param.append("video_url", data.video_url);
     param.append("service_name", data.service);
 
-    const res = await fetch(`http://127.0.0.1:8000/loader/all?${param.toString()}`, {
+    const res = await fetch(`/loader/all?${param.toString()}`, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: data.cookies_text
@@ -122,7 +122,7 @@ async function getDirect() {
     param.append("video_url", data.video_url);
     param.append("service_name", data.service);
 
-    const res = await fetch(`http://127.0.0.1:8000/loader/fastest?${param.toString()}`, {
+    const res = await fetch(`/loader/fastest?${param.toString()}`, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: data.cookies_text
@@ -168,7 +168,7 @@ async function downloadFile() {
 
 
 
-  const res = await fetch(`http://127.0.0.1:8000/loader/download?${param.toString()}`, {
+  const res = await fetch(`/loader/download?${param.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
       body: data.cookies_text
