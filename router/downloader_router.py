@@ -28,6 +28,7 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
     cookie_file = None
     if cookies_text is not None:
         cookie_file = await cookie_service.make_cookie_file(cookies_text)
+
     result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy_url, filter_query=filter_query, cookie_file=cookie_file)
     return result
 
@@ -40,6 +41,7 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
     cookie_file = None
     if cookies_text is not None:
         cookie_file = await cookie_service.make_cookie_file(cookies_text)
+
     result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy_url, cookie_file=cookie_file)
     return result
 
