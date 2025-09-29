@@ -31,8 +31,8 @@ async def delete_proxy(url: str, proxy_service: ProxyAbstractService = Depends(g
     result = await proxy_service.remove_proxy(url)
     return result
 
-@router.get("/sockslist")
-async def get_socks_list(proxy_service: ProxyAbstractService = Depends(get_proxy_service)):
+@router.get("/get_list")
+async def get_list(proxy_service: ProxyAbstractService = Depends(get_proxy_service)):
     result = await proxy_service.get_proxy_list()
     return result
 

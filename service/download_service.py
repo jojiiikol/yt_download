@@ -1,4 +1,5 @@
 import socket
+import time
 from datetime import datetime
 import random
 from typing import Dict, List
@@ -27,31 +28,63 @@ import copy
 
 
 class DownloadPytubefixService(DownloadAbstractService):
-    def __init__(self, combine_service: CombineAbstractService):
+    def __init__(self, combine_service: CombineAbstractService, proxy_service: ProxyAbstractService):
         self.combine_service = combine_service
+        self.proxy_service = proxy_service
+
+    async def sleep(self):
+        delay = random.randint(2, 5)
+        print(f'Sleeping for {delay} seconds')
+        await asyncio.sleep(delay)
 
     async def get_video_info(self, video_url: str, filter_query: FilterParams, proxy_url: str | None = None, cookie_file: str | None = None):
-        video = await asyncio.to_thread(ptf_yt, video_url)
-        await asyncio.to_thread(video.check_availability)
-        streams = video.streams.filter(**filter_query.model_dump())
-        streams = [stream_pytubefix_to_schema(stream) for stream in streams]
-        return streams
+        proxy_list = await self.proxy_service.get_all()
+        proxy_list = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
+        while proxy_list:
+            proxy = random.choice(proxy_list)
+            proxies = {}
+            proxies['http'] = proxy.url
+            proxies['https'] = proxy.url
+            try:
+                await self.sleep()
+                video = await asyncio.to_thread(ptf_yt, video_url, proxies=proxies)
+                await asyncio.to_thread(video.check_availability)
+                streams = video.streams.filter(**filter_query.model_dump())
+                streams = [stream_pytubefix_to_schema(stream) for stream in streams]
+                return streams
+            except Exception as e:
+                print(e)
+                proxy_list.remove(proxy)
+        raise HTTPException(status_code=404, detail="Proxy list is empty")
 
     async def download_video(self, video_url: str, filter_query: ResolutionFilter, proxy_url: str | None = None, cookie_file: str | None = None):
-        video = await asyncio.to_thread(ptf_yt, video_url)
-        await asyncio.to_thread(video.check_availability)
-        audio = None
+        proxy_list = await self.proxy_service.get_all()
+        proxy_list = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
+        while proxy_list:
+            proxy = random.choice(proxy_list)
+            proxies = {}
+            proxies['http'] = proxy.url
+            proxies['https'] = proxy.url
+            try:
+                await self.sleep()
+                video = await asyncio.to_thread(ptf_yt, video_url, proxies=proxies)
+                await asyncio.to_thread(video.check_availability)
+                audio = None
 
-        stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
-        is_empty_streams(stream)
-        if not stream.audio_codec:
-            audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
+                stream = video.streams.filter(**filter_query.model_dump(), type="video").desc().first()
+                is_empty_streams(stream)
+                if not stream.audio_codec:
+                    audio = video.streams.filter(mime_type="audio/mp4").order_by('filesize').desc().first()
 
-        files_path = await asyncio.to_thread(self.download_streams, stream, audio)
-        result_path = await asyncio.to_thread(self.combine_service.combine, files_path.get("video_path"),
-                                              files_path.get("audio_path"))
+                files_path = await asyncio.to_thread(self.download_streams, stream, audio)
+                result_path = await asyncio.to_thread(self.combine_service.combine, files_path.get("video_path"),
+                                                      files_path.get("audio_path"))
 
-        return FileResponse(path=result_path, filename="video.mp4", media_type="application/octet-stream")
+                return FileResponse(path=result_path, filename="video.mp4", media_type="application/octet-stream")
+            except Exception as e:
+                print(e)
+                proxy_list.remove(proxy)
+        raise HTTPException(status_code=404, detail="Proxy list is empty")
 
     def download_streams(self, video_stream: Stream, audio_stream: Stream | None = None) -> Dict[
         str: str, str: str | None]:
@@ -70,11 +103,24 @@ class DownloadPytubefixService(DownloadAbstractService):
         }
 
     async def get_fastest_video(self, video_url: str, proxy_url: str | None = None, cookie_file: str | None = None):
-        video = await asyncio.to_thread(ptf_yt, video_url)
-        await asyncio.to_thread(video.check_availability)
-        stream = video.streams.get_highest_resolution()
-        stream = stream_pytubefix_to_schema(stream)
-        return stream
+        proxy_list = await self.proxy_service.get_all()
+        proxy_list = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
+        while proxy_list:
+            proxy = random.choice(proxy_list)
+            proxies = {}
+            proxies['http'] = proxy.url
+            proxies['https'] = proxy.url
+            try:
+                await self.sleep()
+                video = await asyncio.to_thread(ptf_yt, video_url)
+                await asyncio.to_thread(video.check_availability)
+                stream = video.streams.get_highest_resolution()
+                stream = stream_pytubefix_to_schema(stream)
+                return stream
+            except Exception as e:
+                print(e)
+                proxy_list.remove(proxy)
+        raise HTTPException(status_code=404, detail="Proxy list is empty")
 
 
 class DownloadYtDlpService(DownloadAbstractService):
@@ -91,6 +137,11 @@ class DownloadYtDlpService(DownloadAbstractService):
                 "preferedformat": "mp4"
             }],
         }
+
+    def sleep(self):
+        delay = random.randint(2, 5)
+        print(f'Sleeping for {delay} seconds')
+        time.sleep(delay)
 
     def get_ydl_options(self, proxy_list: List[ProxySchema], cookie_file: str | None = None):
         ydl_opts = copy.deepcopy(self.ydl_opts)
@@ -109,10 +160,11 @@ class DownloadYtDlpService(DownloadAbstractService):
                              cookie_file: str | None = None):
 
         proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list
+        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
 
         def extract_info():
             while proxy_url:
+                self.sleep()
                 try:
                     ydl_opts = self.get_ydl_options(proxy_url, cookie_file)
                     with YoutubeDL(ydl_opts) as ydl:
@@ -123,7 +175,7 @@ class DownloadYtDlpService(DownloadAbstractService):
                         return info_schema
                 except DownloadError as e:
                     proxy_url.remove(ProxySchema(url=ydl_opts["proxy"]))
-            raise HTTPException(status_code=500, detail="The proxy is not working")
+            raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
 
         info = await asyncio.to_thread(extract_info)
         return info
@@ -131,7 +183,7 @@ class DownloadYtDlpService(DownloadAbstractService):
     async def download_video(self, video_url: str, filter_query: ResolutionFilter, proxy_url: str | None = None,
                              cookie_file: str | None = None):
         proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list
+        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
         file_path = await asyncio.to_thread(self.download_video_sync, video_url, proxy_url, filter_query, cookie_file)
         return FileResponse(path=file_path, filename="video.mp4", media_type="application/octet-stream")
 
@@ -148,22 +200,24 @@ class DownloadYtDlpService(DownloadAbstractService):
 
             filename_path += ".mp4"
             try:
+                self.sleep()
                 with YoutubeDL(ydl_opts) as ydl:
                     ydl.download([video_url])
 
                 return filename_path
             except DownloadError as e:
                 proxy_list.remove(ProxySchema(url=ydl_opts["proxy"]))
-        raise HTTPException(status_code=500, detail="The proxy is not working")
+        raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
 
     async def get_fastest_video(self, video_url: str, proxy_url: str | None = None, cookie_file: str | None = None):
 
         proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list
+        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
 
         def extract_info():
             while proxy_url:
                 try:
+                    self.sleep()
                     ydl_opts = self.get_ydl_options(proxy_url, cookie_file)
                     with YoutubeDL(ydl_opts) as ydl:
                         info = ydl.extract_info(video_url, download=False)
@@ -173,7 +227,8 @@ class DownloadYtDlpService(DownloadAbstractService):
                         return info_schema
                 except DownloadError as e:
                     proxy_url.remove(ProxySchema(url=ydl_opts["proxy"]))
-            raise HTTPException(status_code=500, detail="The proxy is not working")
+            raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
+
 
         info = await asyncio.to_thread(extract_info)
         return info[0]

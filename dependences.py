@@ -20,7 +20,7 @@ def get_combine_service() -> CombineAbstractService:
     return CombineFfmpegService()
 
 def get_download_pytubefix_service() -> DownloadPytubefixService:
-    return DownloadPytubefixService(get_combine_service())
+    return DownloadPytubefixService(get_combine_service(), get_proxy_service())
 
 def get_download_ytdlp_service() -> DownloadYtDlpService:
     return DownloadYtDlpService(get_combine_service(), get_proxy_service())

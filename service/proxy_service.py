@@ -77,7 +77,9 @@ class ProxyService(ProxyAbstractService):
             print(e)
         return False
 
-
+    async def get_http_proxies(self):
+        proxy_list = [proxy for proxy in self.proxy_list if proxy.url.startswith("http://") or proxy.url.startswith("https://")]
+        return proxy_list
 
     async def get_random_proxy(self) -> ProxySchema:
         proxy = random.choice(self.proxy_list)
