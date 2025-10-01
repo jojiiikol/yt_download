@@ -2,8 +2,10 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-from dependences import get_proxy_service
+from dependences import get_proxy_service, get_cookie_service
 from schema.proxy_schema import ProxySchema
+from service.cookie_abstract_service import CookieAbstractService
+from service.cookie_service import CookieService
 from service.proxy_abstract_service import ProxyAbstractService
 
 router = APIRouter(
@@ -36,4 +38,8 @@ async def get_list(proxy_service: ProxyAbstractService = Depends(get_proxy_servi
     result = await proxy_service.get_proxy_list()
     return result
 
+@router.get("/test_cookie")
+async def test_cookie(cookie_service: CookieAbstractService = Depends(get_cookie_service)):
+    result = await cookie_service.refresh_cookie()
+    return result
 

@@ -131,11 +131,7 @@ class DownloadYtDlpService(DownloadAbstractService):
             "socket_timeout": 3,
             "retries": 2,
             "noplaylist": True,
-            'merge_output_format': None,
-            "postprocessors": [{
-                "key": "FFmpegVideoConvertor",
-                "preferedformat": "mp4"
-            }],
+            'merge_output_format': "mp4",
         }
 
     def sleep(self):
@@ -146,9 +142,7 @@ class DownloadYtDlpService(DownloadAbstractService):
     def get_ydl_options(self, proxy_list: List[ProxySchema], cookie_file: str | None = None):
         ydl_opts = copy.deepcopy(self.ydl_opts)
 
-        if cookie_file is not None:
-            ydl_opts["cookiefile"] = cookie_file
-
+        ydl_opts["cookiefile"] = cookie_file
         if proxy_list is not None:
             ydl_opts["proxy"] = random.choice(proxy_list).url
         else:
@@ -159,76 +153,53 @@ class DownloadYtDlpService(DownloadAbstractService):
     async def get_video_info(self, video_url: str, filter_query: FilterParams, proxy_url: str | None = None,
                              cookie_file: str | None = None):
 
-        proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
-
         def extract_info():
-            while proxy_url:
-                self.sleep()
-                try:
-                    ydl_opts = self.get_ydl_options(proxy_url, cookie_file)
-                    with YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(video_url, download=False)
-                        info = dlp_parser(info)
-                        info_schema = [stream_dlp_to_schema(stream) for stream in info]
-                        info_schema = dlp_filter(info_schema, filter_query)
-                        return info_schema
-                except DownloadError as e:
-                    proxy_url.remove(ProxySchema(url=ydl_opts["proxy"]))
-            raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
+            self.sleep()
+            ydl_opts = self.get_ydl_options([ProxySchema(url=proxy_url)], cookie_file)
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                info = dlp_parser(info)
+                info_schema = [stream_dlp_to_schema(stream) for stream in info]
+                info_schema = dlp_filter(info_schema, filter_query)
+                return info_schema
 
         info = await asyncio.to_thread(extract_info)
         return info
 
-    async def download_video(self, video_url: str, filter_query: ResolutionFilter, proxy_url: str | None = None,
-                             cookie_file: str | None = None):
-        proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
+    async def download_video(self, video_url: str, proxy_url: str, filter_query: ResolutionFilter, cookie_file: str | None = None):
+
         file_path = await asyncio.to_thread(self.download_video_sync, video_url, proxy_url, filter_query, cookie_file)
         return FileResponse(path=file_path, filename="video.mp4", media_type="application/octet-stream")
 
-    def download_video_sync(self, video_url: str, proxy_list: List[ProxySchema], filter_query: ResolutionFilter,
-                            cookie_file: str | None = None):
+    def download_video_sync(self, video_url: str, proxy_url: str, filter_query: ResolutionFilter,
+                            cookie_file: str):
+
         if filter_query.resolution is None:
             filter_query.resolution = "360p"
 
-        while proxy_list:
-            ydl_opts = self.get_ydl_options(proxy_list, cookie_file)
-            filename_path = POSIX_MEDIA_DIR + "/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-            ydl_opts['format'] = f"bestvideo[height={filter_query.resolution[:len(str(filter_query.resolution)) - 1]}]+bestaudio"
-            ydl_opts['outtmpl'] = filename_path
+        ydl_opts = self.get_ydl_options([ProxySchema(url=proxy_url)], cookie_file)
+        filename_path = POSIX_MEDIA_DIR + "/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        ydl_opts['format'] = f"bestvideo[height={filter_query.resolution[:len(str(filter_query.resolution)) - 1]}]+bestaudio[ext=m4a]/best[ext=mp4]"
+        ydl_opts['outtmpl'] = filename_path
 
-            filename_path += ".mp4"
-            try:
-                self.sleep()
-                with YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([video_url])
+        filename_path += ".mp4"
+        self.sleep()
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
 
-                return filename_path
-            except DownloadError as e:
-                proxy_list.remove(ProxySchema(url=ydl_opts["proxy"]))
-        raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
+        return filename_path
+
 
     async def get_fastest_video(self, video_url: str, proxy_url: str | None = None, cookie_file: str | None = None):
-
-        proxy_list = await self.proxy_service.get_all()
-        proxy_url = [ProxySchema(url=proxy_url)] if proxy_url else proxy_list.copy()
-
         def extract_info():
-            while proxy_url:
-                try:
-                    self.sleep()
-                    ydl_opts = self.get_ydl_options(proxy_url, cookie_file)
-                    with YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(video_url, download=False)
-                        info = dlp_parser(info)
-                        info_schema = [stream_dlp_to_schema(stream) for stream in info]
-                        info_schema = dlp_filter(info_schema, FilterParams(progressive=True))
-                        return info_schema
-                except DownloadError as e:
-                    proxy_url.remove(ProxySchema(url=ydl_opts["proxy"]))
-            raise HTTPException(status_code=500, detail="The proxy is not working, try change cookie or send your proxy")
-
+            self.sleep()
+            ydl_opts = self.get_ydl_options([ProxySchema(url=proxy_url)], cookie_file)
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                info = dlp_parser(info)
+                info_schema = [stream_dlp_to_schema(stream) for stream in info]
+                info_schema = dlp_filter(info_schema, FilterParams(progressive=True))
+                return info_schema
 
         info = await asyncio.to_thread(extract_info)
         return info[0]

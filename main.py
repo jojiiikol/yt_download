@@ -9,6 +9,7 @@ from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
 from exceptions.exception_handler import register_exception_handler
+from router.cookie_router import router as cookie_router
 from router.downloader_router import router as downloader_router
 from router.proxy_router import router as proxy_router
 from utils.scheduler import scheduler
@@ -37,6 +38,7 @@ app.add_middleware(
 register_exception_handler(app)
 app.include_router(downloader_router)
 app.include_router(proxy_router)
+app.include_router(cookie_router)
 
 
 

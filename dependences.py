@@ -13,6 +13,9 @@ from service.proxy_service import ProxyService
 
 proxy_service = ProxyService()
 
+def get_cookie_service():
+    return CookieService()
+
 def get_proxy_service() -> ProxyAbstractService:
     return proxy_service
 

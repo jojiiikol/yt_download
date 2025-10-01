@@ -1,11 +1,46 @@
-import aiofiles
+import time
+from typing import List
+from urllib.parse import urlparse
+
 import os
+
+from playwright.sync_api import sync_playwright, Cookie, ProxySettings
+
+from schema.proxy_schema import ProxySchema
 from service.cookie_abstract_service import CookieAbstractService
-from settings import COOKIES_DIR, POSIX_MEDIA_DIR
-from utils.filename_maker import get_posix_path, get_filename
+from settings import COOKIES_DIR
+from utils.filename_maker import get_filename
+import asyncio
 
 
 class CookieService(CookieAbstractService):
+
+    def normalize_proxy(self, proxy_url: ProxySchema):
+        proxy_url = proxy_url.url
+        proxy_dict = urlparse(proxy_url)
+        proxy_conf = {
+            "server": f"{proxy_dict.scheme}://{proxy_dict.hostname}:{proxy_dict.port}"
+        }
+
+        if proxy_dict.username:
+            proxy_conf["username"] = proxy_dict.username
+        if proxy_dict.password:
+            proxy_conf["password"] = proxy_dict.password
+
+        return proxy_conf
+
+    async def get_cookie_path(self, proxy_url: ProxySchema, cookie_text: str | None = None) -> str:
+        if cookie_text is not None:
+            return await self.make_cookie_file(cookie_text)
+        else:
+            cookie_path = os.path.join(COOKIES_DIR, "cookie.txt")
+            return cookie_path
+
+    async def rewrite_cookie(self, cookie_text: str | None = None):
+        cookie_path = os.path.join(COOKIES_DIR, "cookie.txt")
+        with open(cookie_path, "w", encoding="utf-8") as file:
+            file.write(cookie_text)
+
 
     async def make_cookie_file(self, cookie_text: str) -> str:
         filename = get_filename("cookie.txt")
@@ -13,3 +48,59 @@ class CookieService(CookieAbstractService):
         with open(cookies_file_path, "w", encoding="utf-8") as file:
             file.write(cookie_text)
         return cookies_file_path
+
+    async def save_cookie_to_netscape(self, cookies: List[Cookie], cookie_path: str):
+        with open(cookie_path, "w", encoding="utf-8") as f:
+            f.write("# Netscape HTTP Cookie File\n")
+            for cookie in cookies:
+                domain = cookie.get("domain", "")
+                flag = "TRUE" if domain.startswith(".") else "FALSE"
+                path = cookie.get("path", "/")
+                secure = "TRUE" if cookie.get("secure", False) else "FALSE"
+                expires = str(int(cookie.get("expires", 0)))
+                name = cookie.get("name", "")
+                value = cookie.get("value", "")
+                line = "\t".join([domain, flag, path, secure, expires, name, value])
+                f.write(line + "\n")
+
+    async def refresh_cookie(self, proxy_url: ProxySchema, cookie_path: str | None = None):
+        proxy_conf = self.normalize_proxy(proxy_url)
+        print("Refreshing cookie")
+
+        def sync_refresh_cookie(cookie_path: str):
+            with sync_playwright() as p:
+                browser = p.firefox.launch(headless=True, proxy=ProxySettings(**proxy_conf))
+                context = browser.new_context()
+
+                try:
+                    with open(cookie_path, "r", encoding="utf-8") as f:
+                        lines = f.readlines()
+                        cookies = []
+                        for line in lines:
+                            if line.startswith("#") or not line.strip():
+                                continue
+                            parts = line.strip().split("\t")
+                            if len(parts) == 7:
+                                cookies.append({
+                                    "domain": parts[0],
+                                    "path": parts[2],
+                                    "secure": parts[3] == "TRUE",
+                                    "expires": int(parts[4]),
+                                    "name": parts[5],
+                                    "value": parts[6],
+                                })
+                        if cookies:
+                            context.add_cookies(cookies)
+                except Exception as e:
+                    print(e)
+
+                page = context.new_page()
+                page.goto("https://www.youtube.com/")
+                time.sleep(2)
+                cookie = context.cookies()
+                context.close()
+            return cookie
+
+        cookie = await asyncio.to_thread(sync_refresh_cookie, cookie_path)
+        await self.save_cookie_to_netscape(cookie, cookie_path)
+        return cookie_path

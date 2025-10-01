@@ -7,6 +7,7 @@ import aiohttp
 from asyncio import gather
 
 from aiohttp_socks import ProxyConnector
+from fastapi import HTTPException
 
 from schema.proxy_schema import ProxySchema
 from service.proxy_abstract_service import ProxyAbstractService
@@ -15,9 +16,7 @@ from service.proxy_abstract_service import ProxyAbstractService
 
 class ProxyService(ProxyAbstractService):
     proxy_list: List[ProxySchema] = [
-        ProxySchema(url="http://5.10.245.118:80"),
-        ProxySchema(url="http://194.152.44.40:80"),
-        ProxySchema(url="socks5://185.93.89.147:4002"),
+        ProxySchema(url="socks5://202.148.55.193:39937"),
     ]
 
 
@@ -80,6 +79,12 @@ class ProxyService(ProxyAbstractService):
         proxy_list = [proxy for proxy in self.proxy_list if proxy.url.startswith("http://") or proxy.url.startswith("https://")]
         return proxy_list
 
-    async def get_random_proxy(self) -> ProxySchema:
+    async def get_proxy(self, proxy_url: str | None = None) -> ProxySchema:
+        if proxy_url is not None:
+            proxy_check = await self.check_proxy(ProxySchema(url=proxy_url))
+            if proxy_check:
+                return ProxySchema(url=proxy_url)
+            else:
+                raise HTTPException(status_code=402, detail=f"Invalid proxy for YouTube: {proxy_url}")
         proxy = random.choice(self.proxy_list)
         return proxy

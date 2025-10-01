@@ -15,5 +15,5 @@ class DownloadAbstractService(ABC):
         pass
 
     @abstractmethod
-    async def download_video(self, video_url: str, filter_query: BaseFilter, proxy_url: str | None = None, cookie_file: str | None = None):
+    async def download_video(self, video_url: str, proxy_url: str, filter_query: BaseFilter, cookie_file: str | None = None):
         pass

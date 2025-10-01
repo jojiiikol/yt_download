@@ -24,12 +24,13 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
                             proxy_url: None | str = None,
                            cookies_text: None | str = Body(None, media_type="text/plain"),
                            download_service: DownloadAbstractService = Depends(get_service),
-                           cookie_service: CookieAbstractService = Depends(get_cookie_service)) -> List[StreamSchema]:
-    cookie_file = None
-    if cookies_text is not None:
-        cookie_file = await cookie_service.make_cookie_file(cookies_text)
+                           cookie_service: CookieAbstractService = Depends(get_cookie_service),
+                           proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> List[StreamSchema]:
 
-    result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy_url, filter_query=filter_query, cookie_file=cookie_file)
+    proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
+    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+    result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie,
+                                                   filter_query=filter_query)
     return result
 
 
@@ -37,12 +38,12 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
 async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
                              cookies_text: None | str = Body(None, media_type="text/plain"),
                              download_service: DownloadAbstractService = Depends(get_service),
-                             cookie_service: CookieAbstractService = Depends(get_cookie_service)) -> StreamSchema:
-    cookie_file = None
-    if cookies_text is not None:
-        cookie_file = await cookie_service.make_cookie_file(cookies_text)
+                             cookie_service: CookieAbstractService = Depends(get_cookie_service),
+                             proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> StreamSchema:
 
-    result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy_url, cookie_file=cookie_file)
+    proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
+    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+    result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie)
     return result
 
 
@@ -50,13 +51,12 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
 async def download_video(video_url: str,  proxy_url: None | str = None, filter_query: BaseFilter = Depends(ResolutionFilter),
                          cookies_text: None | str = Body(None, media_type="text/plain"),
                          download_service: DownloadAbstractService = Depends(get_service),
-                         cookie_service: CookieAbstractService = Depends(get_cookie_service)) -> FileResponse:
-    cookie_file = None
-    if cookies_text is not None:
-        cookie_file = await cookie_service.make_cookie_file(cookies_text)
+                         cookie_service: CookieAbstractService = Depends(get_cookie_service),
+                         proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> FileResponse:
 
 
-    result = await download_service.download_video(video_url=video_url, proxy_url=proxy_url, filter_query=filter_query,
-                                                   cookie_file=cookie_file)
+    proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
+    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+    result = await download_service.download_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie, filter_query=filter_query)
 
     return result

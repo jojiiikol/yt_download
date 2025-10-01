@@ -22,5 +22,5 @@ class ProxyAbstractService(ABC):
         pass
 
     @abstractmethod
-    async def get_random_proxy(self) -> ProxySchema:
+    async def get_proxy(self, proxy_url: str | None = None) -> ProxySchema:
         pass
