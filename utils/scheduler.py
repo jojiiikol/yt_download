@@ -52,4 +52,4 @@ async def refresh_cookie_task(cookie_service: CookieAbstractService = get_cookie
     print(f"Refreshed cookie: {cookie_path}")
 
 scheduler.add_job(cleanup_task, "interval", minutes=60)
-scheduler.add_job(refresh_cookie_task, "interval", minutes=5)
+scheduler.add_job(refresh_cookie_task, "interval", minutes=2)

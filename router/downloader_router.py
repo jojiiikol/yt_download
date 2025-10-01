@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, HTTPException
 from fastapi.params import Depends, Body
 
 from starlette.responses import FileResponse
@@ -28,10 +28,14 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
                            proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> List[StreamSchema]:
 
     proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
-    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
-    result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie,
-                                                   filter_query=filter_query)
-    return result
+    try:
+        cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+        result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie,
+                                                           filter_query=filter_query)
+        return result
+    except Exception as e:
+        await proxy_service.remove_proxy(url=proxy.url)
+        raise HTTPException(status_code=400, detail="Proxy doesnt working")
 
 
 @router.post("/fastest")
@@ -40,11 +44,14 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
                              download_service: DownloadAbstractService = Depends(get_service),
                              cookie_service: CookieAbstractService = Depends(get_cookie_service),
                              proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> StreamSchema:
-
     proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
-    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
-    result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie)
-    return result
+    try:
+        cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+        result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie)
+        return result
+    except Exception as e:
+        await proxy_service.remove_proxy(url=proxy_url)
+        raise HTTPException(status_code=400, detail="Proxy doesnt working")
 
 
 @router.post("/download")
@@ -54,9 +61,11 @@ async def download_video(video_url: str,  proxy_url: None | str = None, filter_q
                          cookie_service: CookieAbstractService = Depends(get_cookie_service),
                          proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> FileResponse:
 
-
     proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
-    cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
-    result = await download_service.download_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie, filter_query=filter_query)
-
-    return result
+    try:
+        cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
+        result = await download_service.download_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie, filter_query=filter_query)
+        return result
+    except Exception as e:
+        await proxy_service.remove_proxy(url=proxy_url)
+        raise HTTPException(status_code=400, detail="Proxy doesnt working")

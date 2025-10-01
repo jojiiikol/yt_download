@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from typing import List
 
@@ -7,16 +8,18 @@ import aiohttp
 from asyncio import gather
 
 from aiohttp_socks import ProxyConnector
+from dotenv import load_dotenv
 from fastapi import HTTPException
 
 from schema.proxy_schema import ProxySchema
 from service.proxy_abstract_service import ProxyAbstractService
 
-
+load_dotenv()
 
 class ProxyService(ProxyAbstractService):
     proxy_list: List[ProxySchema] = [
         ProxySchema(url="socks5://202.148.55.193:39937"),
+        ProxySchema(url="http://103.167.170.244:1111"),
     ]
 
 
@@ -43,17 +46,21 @@ class ProxyService(ProxyAbstractService):
     async def get_proxy_list(self):
         schemas = None
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://www.proxy-list.download/api/v1/get?type=http") as response:
-                text = await response.text()
-                text = text.splitlines()
-                schemas = [ProxySchema(url=f"http://{ip}") for ip in text]
-            async with session.get("https://www.proxy-list.download/api/v1/get?type=socks5") as response:
-                text = await response.text()
-                text = text.splitlines()
-                schemas += [ProxySchema(url=f"socks5://{ip}") for ip in text]
+            async with session.get(f"http://htmlweb.ru/json/proxy/get?short=2&country_not=RU&perpage=100&api_key={os.getenv("PROXY_API_KEY")}") as response:
+                text = await response.json()
+                schemas = []
+                for i in range(0, 100):
+                    try:
+                        if text[str(i)].find("://") == -1:
+                            schemas.append(ProxySchema(url=f"http://{text[str(i)]}"))
+                        else:
+                            schemas.append(ProxySchema(url=f"{text[str(i)]}"))
+                    except Exception as e:
+                        HTTPException(status_code=500, detail="Proxy API doesnt working")
         tasks = [self.check_proxy(proxy) for proxy in schemas]
         result = await gather(*tasks)
         working_proxies = [proxy for proxy, ok in zip(schemas, result) if ok]
+        print(working_proxies)
         self.proxy_list += working_proxies
         return self.proxy_list
 
@@ -63,12 +70,12 @@ class ProxyService(ProxyAbstractService):
             if proxy.url.startswith("socks5://"):
                 connector = ProxyConnector.from_url(proxy.url)
                 async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-                    async with session.get("https://www.google.com/") as response:
+                    async with session.get("https://www.youtube.com/") as response:
                         print(f"{proxy.url} -> {response.status}")
                         return response.status == 200
             else:
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.get("https://www.google.com/", proxy=proxy.url) as response:
+                    async with session.get("https://www.youtube.com/", proxy=proxy.url) as response:
                         print(f"{proxy.url} -> {response.status}")
                         return response.status == 200
         except Exception as e:
@@ -86,5 +93,9 @@ class ProxyService(ProxyAbstractService):
                 return ProxySchema(url=proxy_url)
             else:
                 raise HTTPException(status_code=402, detail=f"Invalid proxy for YouTube: {proxy_url}")
+        if len(self.proxy_list) == 0:
+            await self.get_proxy_list()
+            if len(self.proxy_list) == 0:
+                raise HTTPException(status_code=402, detail=f"Empty proxy pool")
         proxy = random.choice(self.proxy_list)
         return proxy
