@@ -33,6 +33,7 @@ class ProxyService(ProxyAbstractService):
 
 
     async def remove_proxy(self, url: str) -> List[ProxySchema] | None:
+        print("delete ", url)
         for find_proxy in self.proxy_list:
             if find_proxy.url == url:
                 self.proxy_list.remove(find_proxy)

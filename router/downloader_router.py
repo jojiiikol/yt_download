@@ -50,7 +50,7 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
         result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie)
         return result
     except Exception as e:
-        await proxy_service.remove_proxy(url=proxy_url)
+        await proxy_service.remove_proxy(url=proxy.url)
         raise HTTPException(status_code=400, detail="Proxy doesnt working")
 
 
@@ -67,5 +67,5 @@ async def download_video(video_url: str,  proxy_url: None | str = None, filter_q
         result = await download_service.download_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie, filter_query=filter_query)
         return result
     except Exception as e:
-        await proxy_service.remove_proxy(url=proxy_url)
+        await proxy_service.remove_proxy(url=proxy.url)
         raise HTTPException(status_code=400, detail="Proxy doesnt working")
