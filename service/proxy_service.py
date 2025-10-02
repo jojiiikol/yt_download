@@ -18,8 +18,7 @@ load_dotenv()
 
 class ProxyService(ProxyAbstractService):
     proxy_list: List[ProxySchema] = [
-        ProxySchema(url="socks5://202.148.55.193:39937"),
-        ProxySchema(url="http://103.167.170.244:1111"),
+
     ]
 
 

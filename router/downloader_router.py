@@ -4,6 +4,8 @@ from fastapi import APIRouter, Form, HTTPException
 from fastapi.params import Depends, Body
 
 from starlette.responses import FileResponse
+from urllib3.exceptions import ConnectTimeoutError
+from yt_dlp import DownloadError
 
 from dependences import get_service, get_cookie_service, get_proxy_service
 from filter.video_filter import FilterParams, BaseFilter, ResolutionFilter
@@ -33,9 +35,9 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
         result = await download_service.get_video_info(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie,
                                                            filter_query=filter_query)
         return result
-    except Exception as e:
-        await proxy_service.remove_proxy(url=proxy.url)
-        raise HTTPException(status_code=400, detail="Proxy doesnt working")
+    except DownloadError as e:
+        raise HTTPException(status_code=400, detail="Proxy doesnt working or cookie file not updated")
+
 
 
 @router.post("/fastest")
@@ -49,9 +51,10 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
         cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
         result = await download_service.get_fastest_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie)
         return result
-    except Exception as e:
-        await proxy_service.remove_proxy(url=proxy.url)
-        raise HTTPException(status_code=400, detail="Proxy doesnt working")
+    except DownloadError as e:
+        raise HTTPException(status_code=400, detail="Proxy doesnt working or cookie file not updated")
+
+
 
 
 @router.post("/download")
@@ -66,6 +69,5 @@ async def download_video(video_url: str,  proxy_url: None | str = None, filter_q
         cookie = await cookie_service.get_cookie_path(proxy_url=proxy, cookie_text=cookies_text)
         result = await download_service.download_video(video_url=video_url, proxy_url=proxy.url, cookie_file=cookie, filter_query=filter_query)
         return result
-    except Exception as e:
-        await proxy_service.remove_proxy(url=proxy.url)
-        raise HTTPException(status_code=400, detail="Proxy doesnt working")
+    except DownloadError as e:
+        raise HTTPException(status_code=400, detail="Proxy doesnt working or cookie file not updated")
