@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright, Cookie, ProxySettings
 
 from schema.proxy_schema import ProxySchema
 from service.cookie_abstract_service import CookieAbstractService
-from settings import COOKIES_DIR
+from settings import COOKIES_DIR, BROWSER_PROFILE_DIR
 from utils.filename_maker import get_filename
 import asyncio
 
@@ -62,6 +62,29 @@ class CookieService(CookieAbstractService):
                 value = cookie.get("value", "")
                 line = "\t".join([domain, flag, path, secure, expires, name, value])
                 f.write(line + "\n")
+
+    async def refresh_cookie_2(self, proxy_url: ProxySchema, cookie_path: str | None = None):
+        proxy_conf = self.normalize_proxy(proxy_url)
+        print("Refreshing cookie")
+
+        def sync_refresh_cookie(cookie_path: str):
+            with sync_playwright() as p:
+                context = p.firefox.launch_persistent_context(
+                    user_data_dir=BROWSER_PROFILE_DIR,
+                    headless=True,
+                    proxy=ProxySettings(**proxy_conf)
+                )
+
+                page = context.new_page()
+                page.goto("https://www.youtube.com/")
+                time.sleep(2)
+                cookie = context.cookies()
+            return cookie
+
+        cookie = await asyncio.to_thread(sync_refresh_cookie, cookie_path)
+        await self.save_cookie_to_netscape(cookie, cookie_path)
+        return cookie_path
+
 
     async def refresh_cookie(self, proxy_url: ProxySchema, cookie_path: str | None = None):
         proxy_conf = self.normalize_proxy(proxy_url)

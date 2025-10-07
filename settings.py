@@ -11,3 +11,7 @@ POSIX_MEDIA_DIR = get_posix_path(MEDIA_DIR)
 COOKIES_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cookies")
 POSIX_COOKIES_DIR = get_posix_path(COOKIES_DIR)
 
+PROXIES_LIST_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "proxies.json")
+
+BROWSER_PROFILE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "profile/firefox_profile")
+

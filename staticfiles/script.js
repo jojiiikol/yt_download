@@ -3,9 +3,7 @@ function collectData() {
     video_url: document.getElementById("url").value,
     filter_query: document.getElementById("filter").value,
     resolution: document.getElementById("resolution").value,
-    cookies_text: document.getElementById("cookie").value,
-    proxy_url: document.getElementById("proxy").value,
-    service: document.getElementById("service").value
+    cookies_text: document.getElementById("cookie").value
   };
 }
 
@@ -76,10 +74,8 @@ async function getInfo() {
     else if (data.filter_query === "progressive") param.append("progressive", "True");
 
     if (data.resolution) param.append("resolution", data.resolution);
-    if (data.proxy_url) param.append("proxy_url", data.proxy_url);
 
     param.append("video_url", data.video_url);
-    param.append("service_name", data.service);
 
     const res = await fetch(`/loader/all?${param.toString()}`, {
       method: "POST",
@@ -117,10 +113,8 @@ async function getDirect() {
 
 
 
-    if (data.proxy_url) param.append("proxy_url", data.proxy_url);
 
     param.append("video_url", data.video_url);
-    param.append("service_name", data.service);
 
     const res = await fetch(`/loader/fastest?${param.toString()}`, {
       method: "POST",
@@ -159,12 +153,8 @@ async function downloadFile() {
   if (data.resolution !== "") {
       param.append("resolution", data.resolution)
   }
-  if (data.proxy_url !== "") {
-      param.append("proxy_url", data.proxy_url)
-  }
   param.append("video_url", data.video_url)
-  param.append("proxy_url", data.proxy_url)
-  param.append("service_name", data.service)
+
 
 
 

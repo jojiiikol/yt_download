@@ -8,6 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 
+from dependences import proxy_service
 from exceptions.exception_handler import register_exception_handler
 from router.cookie_router import router as cookie_router
 from router.downloader_router import router as downloader_router
@@ -20,9 +21,11 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     scheduler.start()
     print("Scheduler started")
+    await proxy_service.import_from_file()
     yield
     scheduler.shutdown()
     print("Scheduler stopped")
+    await proxy_service.export_to_file()
 app = FastAPI(title="yt-download_client", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="./staticfiles"), name="static")
 

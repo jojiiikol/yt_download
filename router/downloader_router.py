@@ -7,7 +7,7 @@ from starlette.responses import FileResponse
 from urllib3.exceptions import ConnectTimeoutError
 from yt_dlp import DownloadError
 
-from dependences import get_service, get_cookie_service, get_proxy_service
+from dependences import get_cookie_service, get_proxy_service, get_download_ytdlp_service
 from filter.video_filter import FilterParams, BaseFilter, ResolutionFilter
 from schema.proxy_schema import ProxySchema
 from schema.stream_schema import StreamSchema
@@ -25,7 +25,7 @@ router = APIRouter(
 async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(FilterParams),
                             proxy_url: None | str = None,
                            cookies_text: None | str = Body(None, media_type="text/plain"),
-                           download_service: DownloadAbstractService = Depends(get_service),
+                           download_service: DownloadAbstractService = Depends(get_download_ytdlp_service),
                            cookie_service: CookieAbstractService = Depends(get_cookie_service),
                            proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> List[StreamSchema]:
 
@@ -43,7 +43,7 @@ async def get_streams_info(video_url: str, filter_query: BaseFilter = Depends(Fi
 @router.post("/fastest")
 async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
                              cookies_text: None | str = Body(None, media_type="text/plain"),
-                             download_service: DownloadAbstractService = Depends(get_service),
+                             download_service: DownloadAbstractService = Depends(get_download_ytdlp_service),
                              cookie_service: CookieAbstractService = Depends(get_cookie_service),
                              proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> StreamSchema:
     proxy = await proxy_service.get_proxy(proxy_url=proxy_url)
@@ -60,7 +60,7 @@ async def get_fastest_stream(video_url: str, proxy_url: None | str = None,
 @router.post("/download")
 async def download_video(video_url: str,  proxy_url: None | str = None, filter_query: BaseFilter = Depends(ResolutionFilter),
                          cookies_text: None | str = Body(None, media_type="text/plain"),
-                         download_service: DownloadAbstractService = Depends(get_service),
+                         download_service: DownloadAbstractService = Depends(get_download_ytdlp_service),
                          cookie_service: CookieAbstractService = Depends(get_cookie_service),
                          proxy_service: ProxyAbstractService = Depends(get_proxy_service)) -> FileResponse:
 

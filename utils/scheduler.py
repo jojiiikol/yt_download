@@ -34,7 +34,7 @@ async def clean_dir(path: str):
     for file in files:
         if file == "cookie.txt":
             continue
-        file_datetime_created = datetime.strptime(file.split(".")[0], "%Y%m%d-%H%M%S")
+        file_datetime_created = datetime.strptime(file.split(".")[0], "%Y%m%d-%H%M%S-%f")
         if datetime.now() - file_datetime_created > timedelta(hours=1):
             print(f"Deleting {file}")
             os.remove(os.path.join(path, file))
@@ -48,7 +48,7 @@ async def refresh_cookie_task(cookie_service: CookieAbstractService = get_cookie
     cookie_path = os.path.join(COOKIES_DIR, "cookie.txt")
     proxy = await proxy_service.get_proxy()
     print(proxy)
-    cookie_path = await cookie_service.refresh_cookie(proxy_url=proxy, cookie_path=cookie_path)
+    cookie_path = await cookie_service.refresh_cookie_2(proxy_url=proxy, cookie_path=cookie_path)
     print(f"Refreshed cookie: {cookie_path}")
 
 scheduler.add_job(cleanup_task, "interval", minutes=60)
