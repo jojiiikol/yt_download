@@ -50,16 +50,17 @@ class ProxyService(ProxyAbstractService):
     async def get_proxy_list(self):
         schemas = None
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://px6.link/api/{os.getenv('PROXY_API_KEY')}/getproxy/") as response:
+            async with session.get(f"http://htmlweb.ru/json/proxy/get?short=2&country_not=RU&perpage=10&api_key={os.getenv("PROXY_API_KEY")}") as response:
                 text = await response.json()
-                proxy_list = text["list"].values()
                 schemas = []
-                for proxy in proxy_list:
-                    if (proxy["user"] != "") and (proxy["pass"] != ""):
-                        schemas.append(ProxySchema(url=f"{proxy['type']}://{proxy['user']}:{proxy['pass']}@{proxy['host']}:{proxy['port']}"))
-                    else:
-                        schemas.append(ProxySchema(
-                            url=f"{proxy['type']}://{proxy['host']}:{proxy['port']}"))
+                for i in range(0, 100):
+                    try:
+                        if text[str(i)].find("://") == -1:
+                            schemas.append(ProxySchema(url=f"http://{text[str(i)]}"))
+                        else:
+                            schemas.append(ProxySchema(url=f"{text[str(i)]}"))
+                    except Exception as e:
+                        HTTPException(status_code=500, detail="Proxy API doesnt working")
         tasks = [self.check_proxy(proxy) for proxy in schemas]
         result = await gather(*tasks)
         working_proxies = [proxy for proxy, ok in zip(schemas, result) if ok]

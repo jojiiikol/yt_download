@@ -67,6 +67,8 @@ class CookieService(CookieAbstractService):
         proxy_conf = self.normalize_proxy(proxy_url)
         print("Refreshing cookie")
 
+
+
         def sync_refresh_cookie(cookie_path: str):
             with sync_playwright() as p:
                 context = p.firefox.launch_persistent_context(
@@ -81,49 +83,11 @@ class CookieService(CookieAbstractService):
                 cookie = context.cookies()
             return cookie
 
-        cookie = await asyncio.to_thread(sync_refresh_cookie, cookie_path)
-        await self.save_cookie_to_netscape(cookie, cookie_path)
-        return cookie_path
+        if not os.path.exists(BROWSER_PROFILE_DIR):
+            raise FileNotFoundError()
+        else:
+            cookie = await asyncio.to_thread(sync_refresh_cookie, cookie_path)
+            await self.save_cookie_to_netscape(cookie, cookie_path)
+            return cookie_path
 
 
-    async def refresh_cookie(self, proxy_url: ProxySchema, cookie_path: str | None = None):
-        proxy_conf = self.normalize_proxy(proxy_url)
-        print("Refreshing cookie")
-
-        def sync_refresh_cookie(cookie_path: str):
-            with sync_playwright() as p:
-                browser = p.firefox.launch(headless=True, proxy=ProxySettings(**proxy_conf))
-                context = browser.new_context()
-
-                try:
-                    with open(cookie_path, "r", encoding="utf-8") as f:
-                        lines = f.readlines()
-                        cookies = []
-                        for line in lines:
-                            if line.startswith("#") or not line.strip():
-                                continue
-                            parts = line.strip().split("\t")
-                            if len(parts) == 7:
-                                cookies.append({
-                                    "domain": parts[0],
-                                    "path": parts[2],
-                                    "secure": parts[3] == "TRUE",
-                                    "expires": int(parts[4]),
-                                    "name": parts[5],
-                                    "value": parts[6],
-                                })
-                        if cookies:
-                            context.add_cookies(cookies)
-                except Exception as e:
-                    print(e)
-
-                page = context.new_page()
-                page.goto("https://www.youtube.com/")
-                time.sleep(2)
-                cookie = context.cookies()
-                context.close()
-            return cookie
-
-        cookie = await asyncio.to_thread(sync_refresh_cookie, cookie_path)
-        await self.save_cookie_to_netscape(cookie, cookie_path)
-        return cookie_path
