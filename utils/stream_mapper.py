@@ -1,22 +1,9 @@
 from typing import List, Dict
 
-from pytubefix import Stream
 
 from filter.video_filter import FilterParams
 from schema.stream_schema import StreamSchema
 
-
-def stream_pytubefix_to_schema(stream: Stream) -> StreamSchema:
-    stream_schema = StreamSchema(
-        itag=str(stream.itag),
-        title=stream.title,
-        size=stream.filesize_mb,
-        download_url=stream.url,
-        video_codec=stream.video_codec,
-        audio_codec=stream.audio_codec,
-        resolution=stream.resolution,
-    )
-    return stream_schema
 
 
 def stream_dlp_to_schema(video_info: Dict) -> StreamSchema:
